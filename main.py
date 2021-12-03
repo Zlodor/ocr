@@ -1,30 +1,33 @@
+import datetime
 import cv2
 import pytesseract
 import json
 import time
 from pytesseract import Output
+import rec
 
 cv2.namedWindow("Capture", cv2.WINDOW_NORMAL)
 cv2.resizeWindow("Capture", 1280, 720)
 last_detection_time = 0.0  # Время, когда в последний раз задетектился номер вагона
 yes_new_data = False  # Флаг о наличии задетекченных номеров
 url = "http://10.29.34.176:8080/video"
-history = []    # Сюда заносятся номера вагонов одного состава
+history = []  # Сюда заносятся номера вагонов одного состава
 
 
 def MakeJSON():
     global yes_new_data
     global history
     dump = json.dumps(history)
-    history.clear()
-    print(dump)
+    with open(f'./JSONs/{datetime.datetime.now()}.json', 'w') as f:
+        json.dump(history, f)
     yes_new_data = False
+    history.clear()
 
 
 def OCR(image):
     global last_detection_time
     global yes_new_data
-    global  history
+    global history
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     threshold_img = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
@@ -57,27 +60,18 @@ def OCR(image):
             (x, y, w, h) = (
                 details['left'][sequence_number], details['top'][sequence_number], details['width'][sequence_number],
                 details['height'][sequence_number])
-            # threshold_img = cv2.rectangle(threshold_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
             image = cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
     cv2.imshow('Capture', image)
 
 
-
-    # with open('result_text.txt', 'w', newline="") as file:
-    #     csv.writer(file, delimiter=" ").writerows(parse_text)
-
-
 def RTSP_Cpture():
     vcap = cv2.VideoCapture(url)
-    # vcap = cv2.VideoCapture("rtsp://10.22.116.83:8080/h264_pcm.sdp")
     ret, frame = vcap.read()
     return frame
 
 
 if __name__ == '__main__':
-    # numbers = []
-    # MakeJSON(numbers)
     while True:
         img = RTSP_Cpture()
         # img = cv2.imread('test.png')
