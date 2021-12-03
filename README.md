@@ -13,4 +13,5 @@ Linux или Windows
   <li>установите Python 3</li>
   <li>Установите Tesseract-ocr (sudo apt-get install tesseract-ocr -y) (https://github.com/tesseract-ocr/tesseract)</li>
   <li>Установите необходимые пакеты для python из списка import</li>
+  <li>В переменную url вставте ссылку на rtsp поток</li>
 </ul>
