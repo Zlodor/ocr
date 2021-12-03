@@ -1,22 +1,30 @@
 import cv2
 import pytesseract
-import threading
+import json
 import time
 from pytesseract import Output
 
 cv2.namedWindow("Capture", cv2.WINDOW_NORMAL)
 cv2.resizeWindow("Capture", 1280, 720)
-last_detection_time = 0.0   # Время, когда в последний раз задетектился номер вагона
-yes_new_data = False        # Флаг о наличии задетекченных номеров
+last_detection_time = 0.0  # Время, когда в последний раз задетектился номер вагона
+yes_new_data = False  # Флаг о наличии задетекченных номеров
+url = "http://10.29.34.176:8080/video"
+history = []    # Сюда заносятся номера вагонов одного состава
 
 
 def MakeJSON():
-    print("Make JSON")
+    global yes_new_data
+    global history
+    dump = json.dumps(history)
+    history.clear()
+    print(dump)
+    yes_new_data = False
 
 
 def OCR(image):
     global last_detection_time
     global yes_new_data
+    global  history
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     threshold_img = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
@@ -27,13 +35,18 @@ def OCR(image):
 
     numbers = []
     total_boxes = len(details['text'])
-    # Убираем 'пустые' слова
+
     for nm in range(total_boxes):
-        if details['text'][nm] == 8:
-            numbers.append(details['text'][nm])
+        if len(details['text'][nm]) == 8:
+            if details['text'][nm] not in numbers:
+                numbers.append(details['text'][nm])
             last_detection_time = time.time()
             yes_new_data = True
     print(numbers)
+
+    for nm in numbers:
+        if nm not in history:
+            history.append(nm)
 
     if len(numbers) == 0:
         if (time.time() - last_detection_time) > 30.0 and yes_new_data is True:
@@ -49,20 +62,24 @@ def OCR(image):
 
     cv2.imshow('Capture', image)
 
+
+
     # with open('result_text.txt', 'w', newline="") as file:
     #     csv.writer(file, delimiter=" ").writerows(parse_text)
 
 
 def RTSP_Cpture():
-    vcap = cv2.VideoCapture("http://10.29.34.176:8080/video")
+    vcap = cv2.VideoCapture(url)
     # vcap = cv2.VideoCapture("rtsp://10.22.116.83:8080/h264_pcm.sdp")
     ret, frame = vcap.read()
     return frame
 
 
 if __name__ == '__main__':
+    # numbers = []
+    # MakeJSON(numbers)
     while True:
         img = RTSP_Cpture()
-        # image = cv2.imread('test.png')
+        # img = cv2.imread('test.png')
         OCR(img)
         cv2.waitKey(1)
